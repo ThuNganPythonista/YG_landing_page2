@@ -4,7 +4,7 @@ import Slider from "react-slick";
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { ComponentProps, useEffect, useRef, useState } from "react";
+import { ComponentProps, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import translations from "../../public/translation/translations";
@@ -30,8 +30,8 @@ export default function Slide5() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   return (
     <>
-      <div className="absolute inset-0 bg-black/45 pointer-events-none z-10"></div>
-      <div className="absolute size-full z-20 flex flex-col justify-center items-center gap-[20%] slide5:gap-20">
+      <div className="absolute inset-0 bg-black/65 pointer-events-none z-10"></div>
+      <div className="absolute size-full z-20 flex flex-col justify-center items-center gap-6 sm:gap-24 md:gap-20 lg:gap-28 xl:gap-32 2xl:gap-36">
         <h1 className="text-[42px] sm:text-[36px] md:text-[48px] lg:text-[64px] xl:text-[72px] 2xl:text-[80px] 3xl:text-[96px] font-bold text-[#ec6629]">
           {t.projects}
         </h1>
@@ -54,15 +54,25 @@ function SlideShow({
   const [screenWidth, setScreenWidth] = useState(0);
   const sliderRef = useRef<Slider | null>(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (sliderRef.current) {
-        sliderRef.current.slickNext();
-      }
-    }, 10000); // 10 giây
+  const calculatedVideos = useMemo(
+    () =>
+      videos.length < MIN_SLIDES_TO_SHOW
+        ? videos.concat(videos.toSpliced(MIN_SLIDES_TO_SHOW - videos.length))
+        : videos,
+    []
+  );
 
-    return () => clearInterval(interval);
-  }, []);
+  const calculatedBackgroundImages = useMemo(
+    () =>
+      backgroundImages.length < MIN_SLIDES_TO_SHOW
+        ? backgroundImages.concat(
+            backgroundImages.toSpliced(
+              MIN_SLIDES_TO_SHOW - backgroundImages.length
+            )
+          )
+        : backgroundImages,
+    []
+  );
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -119,7 +129,6 @@ function SlideShow({
 
     const backgroundVideoElement = document.createElement("video");
     backgroundVideoElement.src = videos[videoIndex];
-    backgroundVideoElement.loop = true;
     backgroundVideoElement.playsInline = true;
     backgroundVideoElement.muted = true;
     backgroundVideoElement.style.position = "absolute";
@@ -134,7 +143,6 @@ function SlideShow({
 
     const videoElement = document.createElement("video");
     videoElement.src = videos[videoIndex];
-    videoElement.loop = true;
     videoElement.playsInline = true;
     videoElement.volume = 0;
     videoElement.style.position = "absolute";
@@ -147,7 +155,7 @@ function SlideShow({
     videoElement.style.cursor = "pointer";
 
     videoElement.onclick = async () => {
-        if (videoElement.paused) {
+      if (videoElement.paused) {
         backgroundVideoElement.currentTime = videoElement.currentTime;
         await Promise.all([backgroundVideoElement.play(), videoElement.play()]);
       } else {
@@ -155,6 +163,10 @@ function SlideShow({
         videoElement.pause();
         backgroundVideoElement.currentTime = videoElement.currentTime;
       }
+    };
+
+    videoElement.onended = () => {
+      sliderRef.current?.slickNext();
     };
 
     let intervalId: unknown;
@@ -231,15 +243,13 @@ function SlideShow({
         swipe={false}
         className="relative z-30"
       >
-        {Array.from({ length: slidesToShow }).map((_, index) => {
+        {Array.from({ length: calculatedVideos.length }).map((_, index) => {
           const offsetIndexFromCenter =
             (index - currentSlide + slidesToShow) % slidesToShow;
           const adjustedOffsetIndexFromCenter =
             Math.abs(offsetIndexFromCenter) > slidesToShow / 2
               ? offsetIndexFromCenter - slidesToShow
               : offsetIndexFromCenter;
-
-          const videoIndex = (currentSlide + index) % videos.length;
 
           if (
             Math.abs(adjustedOffsetIndexFromCenter) >
@@ -252,7 +262,7 @@ function SlideShow({
                 className="w-full h-1/2 aspect-video !flex justify-center items-center bg-red-500 transition-all duration-[25ms] shadow-2xl relative opacity-0"
               >
                 <Image
-                  src={backgroundImages[videoIndex]}
+                  src={calculatedBackgroundImages[index]}
                   alt=""
                   fill
                   className="object-cover"
@@ -268,7 +278,7 @@ function SlideShow({
               className="w-full h-1/2 aspect-video !flex justify-center items-center bg-red-500 transition-all duration-300 shadow-2xl relative sm:scale-[calc(var(--init-scale)-max(var(--offset),-1*var(--offset))*0.15)] sm:z-[calc(50-max(var(--offset),-1*var(--offset)))] sm:translate-x-[calc(50%*-1*var(--offset))]"
             >
               <Image
-                src={backgroundImages[videoIndex]}
+                src={calculatedBackgroundImages[index]}
                 alt=""
                 fill
                 className="object-cover"
@@ -285,9 +295,9 @@ function NextArrowIcon({ onClick }: ComponentProps<"div">) {
   return (
     <div
       onClick={onClick}
-      className="cursor-pointer absolute z-[60] right-0 top-1/2 -translate-y-1/2"
+      className="cursor-pointer absolute z-[60] right-0 md:right-5 lg:right-10 top-1/2 -translate-y-1/2"
     >
-      <CircleChevronRight className="size-10 focus-visible:text-[#ec6629] transition-all" />
+      <CircleChevronRight className="xl:size-20 lg:size-16 md:size-12 size-10 focus-visible:text-[#ec6629] transition-all" />
     </div>
   );
 }
@@ -296,9 +306,9 @@ function PrevArrowIcon({ onClick }: ComponentProps<"div">) {
   return (
     <div
       onClick={onClick}
-      className="cursor-pointer absolute z-[60] left-0 top-1/2 -translate-y-1/2"
+      className="cursor-pointer absolute z-[60] left-0 md:left-5 lg:left-10 top-1/2 -translate-y-1/2"
     >
-      <CircleChevronLeft className="size-10 focus-visible:text-[#ec6629] transition-all" />
+      <CircleChevronLeft className="xl:size-20 lg:size-16 md:size-12 size-10 focus-visible:text-[#ec6629] transition-all" />
     </div>
   );
 }
